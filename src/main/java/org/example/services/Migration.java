@@ -30,8 +30,7 @@ public class Migration {
     public void init(String configPath) throws IllegalArgumentException, IOException, SQLException {
         parseConfig(configPath);
         connectDb();
-        System.out.println("Connected to the database.");
-        System.out.println(database.select("SELECT * FROM client"));
+        logger.info("Migration initialized with the following configuration: {}", this);
     }
 
     private String getScript(int version) throws IOException {
