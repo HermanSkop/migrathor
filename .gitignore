@@ -37,3 +37,4 @@ build/
 ### Mac OS ###
 .DS_Store
 /app.properties
+/src/main/resources/Migrathor_bootstrap_create.sql

@@ -1,45 +1,50 @@
-package org.example;
+package org.example.cli;
 
+import ch.qos.logback.classic.Logger;
 import org.example.services.Migration;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 
-import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.Callable;
 import java.util.Scanner;
 
 @Command(
         name = "Main",
         description = "Start the application with the specified configuration file.",
-        subcommands = {MigrateCommand.class}
+        subcommands = {MigrateCommand.class, StateCommand.class}
 )
 public class Main implements Callable<Integer> {
     @Parameters(index = "0", description = "The path to the .properties configuration file.")
     private String configPath;
+    final static Logger logger = (Logger) LoggerFactory.getLogger(Main.class);
 
     @Override
     public Integer call() {
         Migration migration = Migration.getMigration();
+        logger.info("Starting the application with the configuration file: {}", configPath);
         try {
-            migration.setConfig(configPath);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Error: " + e.getMessage());
+            migration.init(configPath);
+        } catch (IllegalArgumentException | IOException | SQLException e) {
+            logger.error(e.getMessage(), e);
             return 1;
         }
 
         Scanner scanner = new Scanner(System.in);
         CommandLine cmd = new CommandLine(this);
         while (true) {
-            String input = configPath + " " + scanner.nextLine();
+            String input = scanner.nextLine();
 
             if ("exit".equalsIgnoreCase(input)) {
                 System.out.println("(×_×)");
                 break;
             }
             try {
-                cmd.execute(input.split(" "));
+                cmd.execute((configPath + " " + input).split(" "));
             } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -52,19 +57,3 @@ public class Main implements Callable<Integer> {
     }
 }
 
-@Command(name = "migrate", description = "Perform a migration operation")
-class MigrateCommand implements Runnable {
-
-    @Option(names = {"-mv", "--migrate-to-version"}, description = "The version to migrate the configuration file to.")
-    private Integer migrateToVersion;
-
-    @Override
-    public void run() {
-        try {
-
-            System.out.println("Migrating to version " + migrateToVersion + "...");
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-        }
-    }
-}
