@@ -10,27 +10,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class DatabaseService implements Database {
+public class DatabaseService {
     private final List<Connection> connectionPool = new ArrayList<>();
     private final List<Connection> connectionsInUse = new ArrayList<>();
     private static final int CONNECTIONS = 5;
     private static final int MAX_CONNECTIONS = 15;
-    private final String dbUrl;
-    private final String dbUser;
-    private final String dbPassword;
+    private String dbUrl;
+    private String dbUser;
+    private String dbPassword;
     private static final Logger logger = (Logger) LoggerFactory.getLogger(DatabaseService.class);
+    private static DatabaseService databaseService;
 
-    public DatabaseService(String dbUrl, String dbUser, String dbPassword) throws SQLException {
+    private DatabaseService() throws SQLException {}
+
+    public void init(String dbUrl, String dbUser, String dbPassword) throws SQLException {
         this.dbUrl = dbUrl;
         this.dbUser = dbUser;
         this.dbPassword = dbPassword;
+
         for (int i = 0; i < CONNECTIONS; i++) {
             connectionPool.add(DriverManager.getConnection(dbUrl, dbUser, dbPassword));
         }
-
-        logger.info("Database service initialized.");
-        logger.info("Connections in use: {}", connectionsInUse.size());
-        logger.info("Connections available: {}", connectionPool.size());
     }
 
     public void executeQuery(String query) throws SQLException {
@@ -123,6 +123,11 @@ public class DatabaseService implements Database {
                 }
             }
         }
+    }
+
+    public static DatabaseService getDatabaseService() throws SQLException {
+        if (databaseService == null) databaseService = new DatabaseService();
+        return databaseService;
     }
 
 }

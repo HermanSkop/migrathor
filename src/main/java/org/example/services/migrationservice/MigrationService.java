@@ -1,8 +1,7 @@
-package org.example.services;
+package org.example.services.migrationservice;
 
 import ch.qos.logback.classic.Logger;
-import org.example.services.database.Database;
-import org.example.services.database.DatabaseRedundancyFilter;
+import org.example.services.database.DatabaseService;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -12,18 +11,18 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class Migration {
-    static final Logger logger = (Logger) LoggerFactory.getLogger(Migration.class);
-    private static Migration migration;
+public class MigrationService implements Migration{
+    static final Logger logger = (Logger) LoggerFactory.getLogger(MigrationService.class);
+    private static MigrationService migration;
 
-    private Database database;
+    private DatabaseService database;
     private String dbUrl;
     private String dbUser;
     private String dbPassword;
     private String scriptsPath;
 
-    public static Migration getMigration() {
-        if (migration == null) migration = new Migration();
+    public static MigrationService getMigration() {
+        if (migration == null) migration = new MigrationService();
         return migration;
     }
 
@@ -46,7 +45,8 @@ public class Migration {
     }
 
     private void connectDb() throws SQLException {
-        database = new DatabaseRedundancyFilter(dbUrl, dbUser, dbPassword);
+        database = DatabaseService.getDatabaseService();
+        database.init(dbUrl, dbUser, dbPassword);
     }
 
     private void parseConfig(String configPath) throws IllegalArgumentException {
