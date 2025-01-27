@@ -1,7 +1,8 @@
 package org.example.cli;
 
 import ch.qos.logback.classic.Logger;
-import org.example.services.migrationservice.MigrationService;
+import org.example.services.migrationservice.Filter;
+import org.example.services.migrationservice.Migration;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
@@ -23,7 +24,7 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        MigrationService migration = MigrationService.getMigration();
+        Migration migration = Filter.getInstance();
         logger.info("Starting the application with the configuration file: {}", configPath);
         try {
             migration.init(configPath);

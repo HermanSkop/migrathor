@@ -21,7 +21,7 @@ public class MigrationService implements Migration{
     private String dbPassword;
     private String scriptsPath;
 
-    public static MigrationService getMigration() {
+    static MigrationService getInstance() {
         if (migration == null) migration = new MigrationService();
         return migration;
     }
@@ -32,7 +32,7 @@ public class MigrationService implements Migration{
         logger.info("Migration initialized with the following configuration: {}", this);
     }
 
-    private String getScript(int version) throws IOException {
+    String getScript(int version) throws IOException {
         File scriptFile = new File(scriptsPath + "/v" + version + ".sql");
         logger.info("Reading the script file: {}", scriptFile.getAbsolutePath());
         if (!scriptFile.exists())
@@ -76,5 +76,16 @@ public class MigrationService implements Migration{
                     dbPassword='%s'
                 }
                 """.formatted(dbUrl, dbUser, dbPassword);
+    }
+
+    @Override
+    public void migrateToVersion(int version) {
+        try {
+            String script = getScript(version);
+            database.executeQuery(script);
+            logger.info("Successfully migrated to version {}", version);
+        } catch (IOException | SQLException e) {
+            logger.error("Error migrating to version {}: {}", version, e.getMessage());
+        }
     }
 }

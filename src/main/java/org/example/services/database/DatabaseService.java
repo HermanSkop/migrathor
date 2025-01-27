@@ -5,10 +5,10 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class DatabaseService {
     private final List<Connection> connectionPool = new ArrayList<>();
@@ -21,7 +21,8 @@ public class DatabaseService {
     private static final Logger logger = (Logger) LoggerFactory.getLogger(DatabaseService.class);
     private static DatabaseService databaseService;
 
-    private DatabaseService() throws SQLException {}
+    private DatabaseService() throws SQLException {
+    }
 
     public void init(String dbUrl, String dbUser, String dbPassword) throws SQLException {
         this.dbUrl = dbUrl;
@@ -35,21 +36,20 @@ public class DatabaseService {
 
     public void executeQuery(String query) throws SQLException {
         Connection connection = getConnection();
-        connection.createStatement().execute(query);
-        releaseConnection(connection);
-    }
-
-    public String executeSelectQuery(String query) throws SQLException {
-        Connection connection = getConnection();
         try {
-            return connection.createStatement().executeQuery(query).toString();
+            connection.createStatement().execute(query);
         } finally {
             releaseConnection(connection);
         }
     }
 
-    private String executeSelectQuery(Connection connection, String query) throws SQLException {
-        return connection.createStatement().executeQuery(query).toString();
+    public ResultSet executeSelectQuery(String query) throws SQLException {
+        Connection connection = getConnection();
+        try {
+            return connection.createStatement().executeQuery(query);
+        } finally {
+            releaseConnection(connection);
+        }
     }
 
     private void executeQuery(Connection connection, String query) throws SQLException {
@@ -67,8 +67,7 @@ public class DatabaseService {
         Connection connection = connectionPool.removeLast();
         connectionsInUse.add(connection);
         logger.info("Connection acquired.");
-        logger.info("Connections in use: {}", connectionsInUse.size());
-        logger.info("Connections available: {}", connectionPool.size());
+        logger.info(connectionsInUse.size() + "/" + connectionPool.size());
         return connection;
     }
 
@@ -81,25 +80,21 @@ public class DatabaseService {
             connection.close();
         }
 
-        logger.info("Connections in use: {}", connectionsInUse.size());
-        logger.info("Connections available: {}", connectionPool.size());
-    }
-
-    public void executeTransactionalSelectQuery(String query) {
-        executeTransaction(this::executeSelectQuery, query);
+        logger.info("Connection released.");
+        logger.info(connectionsInUse.size() + "/" + connectionPool.size());
     }
 
     public void executeTransactionalQuery(String query) {
-        executeTransaction(this::executeSelectQuery, query);
+        executeTransaction(this::executeQuery, query);
     }
 
-    private void executeTransaction(TransactionalConsumer<String> transactionalLogic, String query) {
+    private void executeTransaction(TransactionalConsumer<Connection, String> transactionalLogic, String query) {
         Connection connection = null;
         try {
             connection = getConnection();
             connection.setAutoCommit(false);
 
-            transactionalLogic.accept(query);
+            transactionalLogic.accept(connection, query);
 
             connection.commit();
             logger.info("Transaction committed.");
