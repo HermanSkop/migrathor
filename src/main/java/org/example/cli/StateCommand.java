@@ -1,6 +1,7 @@
 package org.example.cli;
 
 import ch.qos.logback.classic.Logger;
+import org.example.services.migrationservice.Filter;
 import org.example.services.migrationservice.MigrationService;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.*;
@@ -11,7 +12,7 @@ public class StateCommand implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Current state: " + MigrationService.getMigration());
+            System.out.println("Current state: " + Filter.getInstance());
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }

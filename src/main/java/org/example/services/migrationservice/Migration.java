@@ -6,5 +6,5 @@ import java.sql.SQLException;
 public interface Migration {
     void init(String configPath) throws IllegalArgumentException, IOException, SQLException;
     String toString();
-
+    void migrateToVersion(int version) throws IOException, SQLException;
 }
