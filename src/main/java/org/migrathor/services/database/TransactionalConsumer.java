@@ -1,4 +1,4 @@
-package org.example.services.database;
+package org.migrathor.services.database;
 
 import java.sql.SQLException;
 

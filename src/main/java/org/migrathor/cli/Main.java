@@ -1,8 +1,8 @@
-package org.example.cli;
+package org.migrathor.cli;
 
 import ch.qos.logback.classic.Logger;
-import org.example.services.migrationservice.Filter;
-import org.example.services.migrationservice.Migration;
+import org.migrathor.services.migrationservice.MetaMigrationLayer;
+import org.migrathor.services.migrationservice.Migration;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
@@ -24,11 +24,11 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        Migration migration = Filter.getInstance();
+        Migration migration = MetaMigrationLayer.getInstance();
         logger.info("Starting the application with the configuration file: {}", configPath);
         try {
             migration.init(configPath);
-        } catch (IllegalArgumentException | IOException | SQLException e) {
+        } catch (IOException | SQLException e) {
             logger.error(e.getMessage(), e);
             return 1;
         }
