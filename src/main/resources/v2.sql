@@ -27,10 +27,6 @@ ALTER TABLE purchase
 CREATE INDEX idx_purchase_item_purchase_id
     ON purchase_item (purchase_id);
 
--- Rename 'purchase_item' table to 'order_item'
-ALTER TABLE purchase_item
-    RENAME TO order_item;
-
 -- Drop a foreign key constraint from 'purchase_item' (in case you want to test removal)
 ALTER TABLE purchase_item
     DROP CONSTRAINT purchase_item_product;

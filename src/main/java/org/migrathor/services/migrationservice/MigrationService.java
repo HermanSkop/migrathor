@@ -1,7 +1,7 @@
-package org.example.services.migrationservice;
+package org.migrathor.services.migrationservice;
 
 import ch.qos.logback.classic.Logger;
-import org.example.services.database.DatabaseService;
+import org.migrathor.services.database.DatabaseService;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -11,29 +11,30 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class MigrationService implements Migration{
+public class MigrationService implements Migration {
     static final Logger logger = (Logger) LoggerFactory.getLogger(MigrationService.class);
     private static MigrationService migration;
 
-    private DatabaseService database;
+    private DatabaseService databaseService;
     private String dbUrl;
     private String dbUser;
     private String dbPassword;
     private String scriptsPath;
+    private String dbName;
 
     static MigrationService getInstance() {
         if (migration == null) migration = new MigrationService();
         return migration;
     }
 
-    public void init(String configPath) throws IllegalArgumentException, IOException, SQLException {
+    public void init(String configPath) throws IllegalArgumentException, SQLException {
         parseConfig(configPath);
         connectDb();
         logger.info("Migration initialized with the following configuration: {}", this);
     }
 
-    String getScript(int version) throws IOException {
-        File scriptFile = new File(scriptsPath + "/v" + version + ".sql");
+    String getScript(int version, ScriptType type) throws IOException {
+        File scriptFile = new File(scriptsPath + "/" + type + version + ".sql");
         logger.info("Reading the script file: {}", scriptFile.getAbsolutePath());
         if (!scriptFile.exists())
             throw new IllegalArgumentException("The specified script does not exist.");
@@ -45,8 +46,8 @@ public class MigrationService implements Migration{
     }
 
     private void connectDb() throws SQLException {
-        database = DatabaseService.getDatabaseService();
-        database.init(dbUrl, dbUser, dbPassword);
+        databaseService = DatabaseService.getDatabaseService();
+        databaseService.init(dbUrl, dbUser, dbPassword);
     }
 
     private void parseConfig(String configPath) throws IllegalArgumentException {
@@ -62,6 +63,7 @@ public class MigrationService implements Migration{
             dbUser = properties.getProperty("db.user");
             dbPassword = properties.getProperty("db.password");
             scriptsPath = properties.getProperty("scripts.dir");
+            dbName = properties.getProperty("db.name");
         } catch (IOException e) {
             throw new IllegalArgumentException("Error reading the configuration file: " + e.getMessage());
         }
@@ -79,13 +81,24 @@ public class MigrationService implements Migration{
     }
 
     @Override
-    public void migrateToVersion(int version) {
+    public void migrateToVersion(int version) throws MigrationException {
         try {
-            String script = getScript(version);
-            database.executeQuery(script);
+            String script = getScript(version, ScriptType.DO);
+            databaseService.executeTransactionalQuery(script);
             logger.info("Successfully migrated to version {}", version);
         } catch (IOException | SQLException e) {
-            logger.error("Error migrating to version {}: {}", version, e.getMessage());
+            throw new MigrationException("Error migrating to version " + version + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void undoMigration(int version) throws SQLException {
+        try {
+            String script = getScript(version, ScriptType.UNDO);
+            databaseService.executeTransactionalQuery(script);
+            logger.info("Successfully undone migration of version {}", version);
+        } catch (IOException e) {
+            logger.error("Error undoing migration of version {}: {}", version, e.getMessage());
         }
     }
 }

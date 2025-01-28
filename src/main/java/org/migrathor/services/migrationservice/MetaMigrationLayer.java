@@ -1,20 +1,20 @@
-package org.example.services.migrationservice;
+package org.migrathor.services.migrationservice;
 
 import ch.qos.logback.classic.Logger;
-import org.example.services.database.DatabaseService;
+import org.migrathor.services.database.DatabaseService;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class Filter implements Migration{
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(Filter.class);
+public class MetaMigrationLayer implements Migration{
     private MigrationService migrationService;
     private DatabaseService databaseService;
     private int currentVersion;
-    private static Filter filter;
-    private static final Logger logger = (Logger) LoggerFactory.getLogger(Filter.class);
+    private static MetaMigrationLayer metaMigrationLayer;
+    private static final Logger logger = (Logger) LoggerFactory.getLogger(MetaMigrationLayer.class);
+
 
     public void init(String configPath) throws SQLException, IOException, IllegalArgumentException {
         logger.info("Initializing migration with the following configuration: {}", configPath);
@@ -27,10 +27,10 @@ public class Filter implements Migration{
     }
 
     public static Migration getInstance() {
-        if (filter == null) {
-            filter = new Filter();
+        if (metaMigrationLayer == null) {
+            metaMigrationLayer = new MetaMigrationLayer();
         }
-        return filter;
+        return metaMigrationLayer;
     }
 
     @Override
@@ -43,20 +43,20 @@ public class Filter implements Migration{
     }
 
     @Override
-    public void migrateToVersion(int version) throws IOException, SQLException {
+    public void migrateToVersion(int version) throws IOException, SQLException, MigrationException {
         logger.info("Migrating to version: {}", version);
         if (isVersionMigrated(version)) {
-            logger.warn("Version {} already migrated. Skipping the migration", version);
+            logger.warn("Version {} already migrated with the same checksum. Skipping the migration", version);
             return;
         }
 
         migrationService.migrateToVersion(version);
-        updateMetadata(version, getChecksum(version));
+        updateMetadataVersion(version, generateChecksum(migrationService.getScript(version, ScriptType.DO)));
 
         logger.info("Migration to version {} completed successfully.", version);
     }
 
-    private void updateMetadata(int version, int checksum) throws SQLException {
+    private void updateMetadataVersion(int version, int checksum) throws SQLException {
         databaseService.executeTransactionalQuery("""
                 DELETE FROM metadata WHERE version = %d;
                 
@@ -65,8 +65,15 @@ public class Filter implements Migration{
                 """.formatted(version, version, checksum, "v" + version + ".sql"));
         updateCurrentVersion();
     }
+    private void removeMetadataVersion(int version) throws SQLException {
+        databaseService.executeTransactionalQuery("""
+                DELETE FROM metadata WHERE version = %d;
+                """.formatted(version));
+        updateCurrentVersion();
+    }
+
     private void createMetadataTable() throws SQLException {
-        databaseService.executeQuery("""
+        databaseService.executeTransactionalQuery("""
                 CREATE TABLE IF NOT EXISTS metadata (
                     version INT PRIMARY KEY,
                     checksum INT NOT NULL,
@@ -75,22 +82,18 @@ public class Filter implements Migration{
                 """);
     }
     private boolean isVersionMigrated(int version) throws SQLException, IOException {
-        return getChecksum(currentVersion) == migrationService.getScript(version).hashCode();
+        return getChecksum(currentVersion) == migrationService.getScript(version, ScriptType.DO).hashCode();
     }
-
     private int getChecksum(int version) throws SQLException {
         try (ResultSet result = databaseService.executeSelectQuery("""
                 SELECT checksum FROM metadata WHERE version = %d;
                 """.formatted(version))) {
-            if (result.next()) {
+            boolean exists = result.next();
+            if (exists) {
                 return result.getInt(1);
             }
         }
         return 1;
-    }
-
-    private int getCurrentVersion() {
-        return currentVersion;
     }
 
     private void updateCurrentVersion() throws SQLException {
@@ -100,5 +103,32 @@ public class Filter implements Migration{
             else
                 throw new SQLException("No version found");
         }
+    }
+
+    @Override
+    public void undoMigration(int version){
+        logger.info("Undoing migration to version: {}", version);
+        try {
+            removeMetadataVersion(version);
+            try {
+                migrationService.undoMigration(version);
+            } catch (Exception e) {
+                try {
+                    updateMetadataVersion(version, getChecksum(version));
+                } catch (SQLException sqlException) {
+                    logger.error("Failed to update metadata version after undoing migration: {} (restoration is needed)", sqlException.getMessage());
+                    throw sqlException;
+                }
+                throw e;
+            }
+
+            logger.info("Undoing migration to version {} completed successfully.", version);
+        } catch (SQLException e) {
+            logger.error("Error undoing migration to version {}: {}", version, e.getMessage());
+        }
+    }
+
+    private int generateChecksum(String script) {
+        return script.hashCode();
     }
 }

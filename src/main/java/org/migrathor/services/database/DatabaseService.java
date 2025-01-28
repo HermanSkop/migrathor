@@ -32,11 +32,11 @@ public class DatabaseService {
         connection.createStatement().execute(query);
     }
 
-    public void executeTransactionalQuery(String query) {
+    public void executeTransactionalQuery(String query) throws SQLException {
         executeTransaction(this::executeQuery, query);
     }
 
-    private void executeTransaction(TransactionalConsumer<Connection, String> transactionalLogic, String query) {
+    private void executeTransaction(TransactionalConsumer<Connection, String> transactionalLogic, String query) throws SQLException {
         Connection connection = null;
         try {
             connection = connectionPool.getConnection();
@@ -55,7 +55,7 @@ public class DatabaseService {
                     logger.error("Failed to roll back transaction.", rollbackEx);
                 }
             }
-            throw new RuntimeException("Transaction failed.", e);
+            throw new SQLException("Transaction failed. Cause: " + e.getMessage(), e);
         } finally {
             if (connection != null) {
                 try {
