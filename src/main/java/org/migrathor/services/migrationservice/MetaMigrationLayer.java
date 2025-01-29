@@ -14,6 +14,9 @@ public class MetaMigrationLayer implements Migration {
     private static MetaMigrationLayer metaMigration;
     private static final Logger logger = (Logger) LoggerFactory.getLogger(MetaMigrationLayer.class);
 
+    private MetaMigrationLayer() {
+    }
+
     @Override
     public void init(String configPath) throws MigrationException {
         logger.info("Initializing migration with the following configuration: {}", configPath);
@@ -37,7 +40,7 @@ public class MetaMigrationLayer implements Migration {
         }
     }
 
-    public static Migration getInstance() {
+    public static MetaMigrationLayer getInstance() {
         if (metaMigration == null) {
             metaMigration = new MetaMigrationLayer();
         }
@@ -132,12 +135,10 @@ public class MetaMigrationLayer implements Migration {
         try (ResultSet result = databaseService.executeSelectQuery("""
                 SELECT checksum FROM metadata WHERE version = %d;
                 """.formatted(version))) {
-            boolean exists = result.next();
-            if (exists) {
+            if (result.next())
                 return result.getInt(1);
-            } else {
+            else
                 return 0;
-            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
