@@ -108,21 +108,24 @@ public class MetaMigrationLayer implements Migration {
 
     private void verifyVersionNotMigrated(int version) throws MigrationException {
         boolean sameChecksum = isChecksumMigrated(version);
-        if (isVersionMigrated(version)) {
+        if (currentVersion == version) {
             if (sameChecksum) {
                 throw new MigrationException("Version " + version + " is already migrated with the same checksum.");
             } else {
                 throw new MigrationException("Version " + version + " is already migrated but with a different checksum.");
             }
         }
+        if (currentVersion > version) {
+            if (sameChecksum) {
+                throw new MigrationException("Given version " + version + " is older than the current version " + currentVersion + " and has the same checksum.");
+            } else {
+                throw new MigrationException("Given version " + version + " is older than the current version " + currentVersion);
+            }
+        }
     }
 
     private boolean isChecksumMigrated(int version) throws MigrationException {
         return getMetaChecksum(currentVersion) == generateChecksum(migrationService.getScript(version, ScriptType.DO));
-    }
-
-    private boolean isVersionMigrated(int version) {
-        return currentVersion == version;
     }
 
     /**
