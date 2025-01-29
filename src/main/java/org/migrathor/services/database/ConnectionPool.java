@@ -59,4 +59,21 @@ public class ConnectionPool {
         logger.info("Connection released.");
         logger.info(connectionsInUse.size() + "/" + connectionPool.size());
     }
+
+    public void closeAllConnections() {
+        for (Connection connection : connectionPool) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to close the connection.", e);
+            }
+        }
+        for (Connection connection : connectionsInUse) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                logger.error("Failed to close the connection.", e);
+            }
+        }
+    }
 }

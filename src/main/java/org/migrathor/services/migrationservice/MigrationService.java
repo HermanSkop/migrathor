@@ -26,27 +26,44 @@ public class MigrationService implements Migration {
         return migration;
     }
 
-    public void init(String configPath) throws IllegalArgumentException, SQLException {
+    @Override
+    public void init(String configPath) throws MigrationException {
         parseConfig(configPath);
-        connectDb();
+        try {
+            connectDb();
+        } catch (IllegalStateException e) {
+            destroy();
+            throw new MigrationException(e.getMessage());
+        }
         logger.info("Migration initialized with the following configuration: {}", this);
     }
 
-    String getScript(int version, ScriptType type) throws IOException {
-        File scriptFile = new File(scriptsPath + "/" + type + version + ".sql");
-        logger.info("Reading the script file: {}", scriptFile.getAbsolutePath());
-        if (!scriptFile.exists())
-            throw new IllegalArgumentException("The specified script does not exist.");
-        try {
-            return new String(Files.readAllBytes(scriptFile.toPath()));
-        } catch (IOException e) {
-            throw new IOException("Error reading the script file v" + version + ":" + e.getMessage());
+    public static void destroy() {
+        if (migration != null) {
+            DatabaseService.destroy();
+            migration = null;
         }
     }
 
-    private void connectDb() throws SQLException {
-        databaseService = DatabaseService.getDatabaseService();
-        databaseService.init(dbUrl, dbUser, dbPassword);
+    String getScript(int version, ScriptType type) throws MigrationException {
+        File scriptFile = new File(scriptsPath + "/" + type + version + ".sql");
+        logger.info("Reading the script file: {}", scriptFile.getAbsolutePath());
+        if (!scriptFile.exists())
+            throw new IllegalArgumentException("The specified script does not exist at " + scriptFile.getAbsolutePath());
+        try {
+            return new String(Files.readAllBytes(scriptFile.toPath()));
+        } catch (IOException e) {
+            throw new MigrationException("Unable to read the script file: " + e.getMessage());
+        }
+    }
+
+    private void connectDb() throws IllegalStateException{
+        try {
+            databaseService = DatabaseService.getDatabaseService();
+            databaseService.init(dbUrl, dbUser, dbPassword);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Error connecting to the database: " + e.getMessage());
+        }
     }
 
     private void parseConfig(String configPath) throws IllegalArgumentException {
@@ -84,19 +101,19 @@ public class MigrationService implements Migration {
             String script = getScript(version, ScriptType.DO);
             databaseService.executeTransactionalQuery(script);
             logger.info("Successfully migrated to version {}", version);
-        } catch (IOException | SQLException e) {
+        } catch (SQLException e) {
             throw new MigrationException("Error migrating to version " + version + ": " + e.getMessage());
         }
     }
 
     @Override
-    public void undoMigration(int version) throws SQLException {
+    public void undoMigration(int version) throws MigrationException {
         try {
             String script = getScript(version, ScriptType.UNDO);
             databaseService.executeTransactionalQuery(script);
             logger.info("Successfully undone migration of version {}", version);
-        } catch (IOException e) {
-            logger.error("Error undoing migration of version {}: {}", version, e.getMessage());
+        } catch (SQLException e) {
+            throw new MigrationException("Error undoing migration of version " + version + ": " + e.getMessage());
         }
     }
 }

@@ -12,7 +12,7 @@ public class DatabaseService {
     private static DatabaseService databaseService;
     private ConnectionPool connectionPool;
 
-    private DatabaseService() throws SQLException {
+    private DatabaseService() {
     }
 
     public void init(String dbUrl, String dbUser, String dbPassword) throws SQLException {
@@ -68,9 +68,14 @@ public class DatabaseService {
         }
     }
 
-    public static DatabaseService getDatabaseService() throws SQLException {
+    public static DatabaseService getDatabaseService() {
         if (databaseService == null) databaseService = new DatabaseService();
         return databaseService;
     }
 
+    public static void destroy() {
+        if (databaseService != null && databaseService.connectionPool != null)
+            databaseService.connectionPool.closeAllConnections();
+        databaseService = null;
+    }
 }
