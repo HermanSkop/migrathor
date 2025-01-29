@@ -50,12 +50,32 @@ class MetaMigrationLayerTest {
     }
 
     @Test
-    void undoMigration() throws MigrationException, SQLException {
+    void migrateToVersion_failsWhenDbError() throws MigrationException, SQLException {
+        when(databaseService.executeSelectQuery(anyString())).thenReturn(resultSet);
+        doReturn(1).when(resultSet).getInt(1);
+        when(resultSet.next()).thenReturn(true);
+        when(migrationService.getScript(anyInt(), any())).thenReturn("script");
+        doThrow(new SQLException()).when(databaseService).executeTransactionalQuery(anyString());
+
+        assertThrows(RuntimeException.class, () -> metaMigrationLayer.migrateToVersion(2));
+        verify(migrationService, times(1)).migrateToVersion(2);
+    }
+
+    @Test
+    void undoMigration_success() throws MigrationException, SQLException {
         doReturn(1).when(resultSet).getInt(1);
         when(resultSet.next()).thenReturn(true);
         when(databaseService.executeSelectQuery(anyString())).thenReturn(resultSet);
 
         assertDoesNotThrow(() -> metaMigrationLayer.undoMigration(2));
+        verify(migrationService, times(1)).undoMigration(2);
+    }
+
+    @Test
+    void undoMigration_failsWhenDbError() throws MigrationException, SQLException {
+        doThrow(new SQLException()).when(databaseService).executeTransactionalQuery(anyString());
+
+        assertThrows(RuntimeException.class, () -> metaMigrationLayer.undoMigration(2));
         verify(migrationService, times(1)).undoMigration(2);
     }
 }
