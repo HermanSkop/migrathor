@@ -1,0 +1,1 @@
+ALTER TABLE purchase ADD CONSTRAINT unique_purchase_no UNIQUE (purchase_no);

@@ -1,0 +1,3 @@
+ALTER TABLE shipment ALTER COLUMN "cost" SET DATA TYPE money;
+
+ALTER TABLE product ALTER COLUMN "price" SET DATA TYPE money;
