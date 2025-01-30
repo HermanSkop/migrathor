@@ -1,0 +1,1 @@
+ALTER TABLE purchase ADD COLUMN purchase_date date;

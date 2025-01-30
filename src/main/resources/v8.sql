@@ -1,0 +1,1 @@
+ALTER TABLE purchase DROP COLUMN purchase_date;
