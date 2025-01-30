@@ -14,6 +14,7 @@ java -jar migrathor_x.x.x.jar path/to/your_config.properties
 - `migrate [version]` - Migrate the database to the specified version.
     - `-u` - Undo the given migration.
 - `state` - Show the current state of the tool.
+- `exit` - Exit the tool.
 
 ## Configuration
 The configuration file should look similar to this:
