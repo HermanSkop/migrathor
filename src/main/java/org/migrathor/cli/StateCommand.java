@@ -13,7 +13,7 @@ public class StateCommand implements Runnable {
         try {
             System.out.println("Current state: " + MetaMigrationLayer.getInstance());
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            logger.error(e.getMessage());
         }
     }
 }

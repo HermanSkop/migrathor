@@ -38,7 +38,7 @@ public class Main implements Callable<Integer> {
             try {
                 cmd.execute((configPath + " " + input).split(" "));
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                logger.error(e.getMessage());
             }
         }
 

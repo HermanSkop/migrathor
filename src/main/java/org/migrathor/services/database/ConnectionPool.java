@@ -42,8 +42,6 @@ public class ConnectionPool {
         }
         Connection connection = connectionPool.removeLast();
         connectionsInUse.add(connection);
-        logger.info("Connection acquired.");
-        logger.info(connectionsInUse.size() + "/" + connectionPool.size());
         return connection;
     }
 
@@ -55,9 +53,6 @@ public class ConnectionPool {
             connection = connectionPool.removeLast();
             connection.close();
         }
-
-        logger.info("Connection released.");
-        logger.info(connectionsInUse.size() + "/" + connectionPool.size());
     }
 
     public void closeAllConnections() {

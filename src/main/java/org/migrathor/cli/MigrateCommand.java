@@ -21,7 +21,7 @@ class MigrateCommand implements Runnable {
             if (undo) MetaMigrationLayer.getInstance().undoMigration(version);
             else MetaMigrationLayer.getInstance().migrateToVersion(version);
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            logger.error(e.getMessage());
         }
     }
 }
