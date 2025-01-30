@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MetaMigrationLayer implements Migration {
     private MigrationService migrationService;
@@ -51,9 +53,22 @@ public class MetaMigrationLayer implements Migration {
     public String toString() {
         return migrationService.toString() + """
                 Filter{
-                    currentVersion: %d
+                    currentVersion: %d,
+                    versions: %s
                 }
-                """.formatted(currentVersion);
+                """.formatted(currentVersion, getAllVersions());
+    }
+
+    private List<Integer> getAllVersions() {
+        try (ResultSet result = databaseService.executeSelectQuery("SELECT version FROM metadata ORDER BY version")) {
+            List<Integer> versions = new ArrayList<>();
+            while (result.next()) {
+                versions.add(result.getInt("version"));
+            }
+            return versions;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
