@@ -25,7 +25,7 @@ class MetaMigrationLayerTest {
     @Mock private ResultSet resultSet;
 
     @BeforeEach
-    void setUp() throws MigrationException, NoSuchFieldException, IllegalAccessException, SQLException {
+    void setUp() throws MigrationException, NoSuchFieldException, IllegalAccessException, SQLException, NoSuchMethodException {
         metaMigrationLayer.init("test.properties");
 
         Field migrationServiceField = MetaMigrationLayer.class.getDeclaredField("migrationService");
@@ -35,6 +35,10 @@ class MetaMigrationLayerTest {
         Field databaseServiceField = MetaMigrationLayer.class.getDeclaredField("databaseService");
         databaseServiceField.setAccessible(true);
         databaseServiceField.set(metaMigrationLayer, databaseService);
+
+        Field currentVersion = MetaMigrationLayer.class.getDeclaredField("currentVersion");
+        currentVersion.setAccessible(true);
+        currentVersion.set(metaMigrationLayer, 1);
         }
 
     @Test
@@ -56,6 +60,8 @@ class MetaMigrationLayerTest {
         when(resultSet.next()).thenReturn(true);
         when(migrationService.getScript(anyInt(), any())).thenReturn("script");
         doThrow(new SQLException()).when(databaseService).executeTransactionalQuery(anyString());
+
+
 
         assertThrows(RuntimeException.class, () -> metaMigrationLayer.migrateToVersion(2));
         verify(migrationService, times(1)).migrateToVersion(2);
