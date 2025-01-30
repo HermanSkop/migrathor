@@ -51,7 +51,9 @@ public class MetaMigrationLayer implements Migration {
 
     @Override
     public String toString() {
-        return migrationService.toString() + """
+        updateCurrentVersion();
+        return migrationService.toString() +
+                """
                 Filter{
                     currentVersion: %d,
                     versions: %s
@@ -67,7 +69,10 @@ public class MetaMigrationLayer implements Migration {
             }
             return versions;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            if (e.getMessage().contains("relation \"metadata\" does not exist")) {
+                createMetadataTable();
+                return getAllVersions();
+            } else throw new RuntimeException(e);
         }
     }
 
@@ -170,7 +175,10 @@ public class MetaMigrationLayer implements Migration {
             if (result.next()) currentVersion = result.getInt(1);
             else throw new SQLException("No version found");
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            if (e.getMessage().contains("relation \"metadata\" does not exist")) {
+                createMetadataTable();
+                updateCurrentVersion();
+            } else throw new RuntimeException(e);
         }
     }
 
