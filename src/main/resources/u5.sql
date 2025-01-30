@@ -1,0 +1,1 @@
+ALTER TABLE purchase DROP CONSTRAINT unique_purchase_no;
