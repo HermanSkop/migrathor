@@ -9,10 +9,10 @@ import picocli.CommandLine.*;
 class MigrateCommand implements Runnable {
     final static Logger logger = (Logger) LoggerFactory.getLogger(MigrateCommand.class);
 
-    @Option(names = {"-v", "--version"}, description = "The version to migrate the configuration file to.")
+    @Parameters(description = "The version to migrate the configuration file to.")
     private int version;
 
-    @Option(names = {"-u", "--undo-version"}, description = "Perform undo instead of migration.")
+    @Option(names = {"-u", "--undo-version"}, description = "Perform undo migration instead of upgrading.")
     private boolean undo;
 
     @Override
