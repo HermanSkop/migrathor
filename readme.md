@@ -24,3 +24,14 @@ db.user=postgres
 db.password=password (can be empty)
 scripts.dir=/path/to/migration/scripts
 ```
+
+### Script naming
+- `vn.sql` - do migration script.
+- `un.sql` - undo migration script.
+
+Where n is a positive unique integer.
+
+---
+The sequence of scripts must be in ascending order, but not necessarily consecutive.
+
+---
