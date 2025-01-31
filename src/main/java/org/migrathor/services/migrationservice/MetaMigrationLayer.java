@@ -4,9 +4,11 @@ import ch.qos.logback.classic.Logger;
 import org.migrathor.services.database.DatabaseService;
 import org.slf4j.LoggerFactory;
 
+import java.security.MessageDigest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 
 public class MetaMigrationLayer implements Migration {
@@ -54,11 +56,11 @@ public class MetaMigrationLayer implements Migration {
         updateCurrentVersion();
         return migrationService.toString() +
                 """
-                Filter{
-                    currentVersion: %d,
-                    versions: %s
-                }
-                """.formatted(currentVersion, getAllVersions());
+                        Filter{
+                            currentVersion: %d,
+                            versions: %s
+                        }
+                        """.formatted(currentVersion, getAllVersions());
     }
 
     private List<Integer> getAllVersions() {
@@ -87,13 +89,13 @@ public class MetaMigrationLayer implements Migration {
         logger.info("Migration to version {} completed successfully.", version);
     }
 
-    private void updateMetadataVersion(int version, int checksum) {
+    private void updateMetadataVersion(int version, String checksum) {
         try {
             databaseService.executeTransactionalQuery("""
                     DELETE FROM metadata WHERE version = %d;
                     
                     INSERT INTO metadata (version, checksum, name)
-                    VALUES (%d, %d, '%s');
+                    VALUES (%d, '%s', '%s');
                     """.formatted(version, version, checksum, "v" + version + ".sql"));
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -117,7 +119,7 @@ public class MetaMigrationLayer implements Migration {
             databaseService.executeTransactionalQuery("""
                     CREATE TABLE IF NOT EXISTS metadata (
                         version INT PRIMARY KEY,
-                        checksum INT NOT NULL,
+                        checksum VARCHAR(255) NOT NULL,
                         name VARCHAR(255) NOT NULL
                     );
                     """);
@@ -145,7 +147,7 @@ public class MetaMigrationLayer implements Migration {
     }
 
     private boolean isChecksumMigrated(int version) throws MigrationException {
-        return getMetaChecksum(currentVersion) == generateChecksum(migrationService.getScript(version, ScriptType.DO));
+        return getMetaChecksum(currentVersion).equals(generateChecksum(migrationService.getScript(version, ScriptType.DO)));
     }
 
     /**
@@ -154,14 +156,14 @@ public class MetaMigrationLayer implements Migration {
      * @param version the version to fetch the checksum for
      * @return the checksum of the specified version (0 if the version does not exist)
      */
-    private int getMetaChecksum(int version) {
+    private String getMetaChecksum(int version) {
         try (ResultSet result = databaseService.executeSelectQuery("""
                 SELECT checksum FROM metadata WHERE version = %d;
                 """.formatted(version))) {
             if (result.next())
-                return result.getInt(1);
+                return result.getString(1);
             else
-                return 0;
+                return "";
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -190,7 +192,13 @@ public class MetaMigrationLayer implements Migration {
         logger.info("Undoing migration from version {} completed successfully.", version);
     }
 
-    private int generateChecksum(String script) {
-        return script.hashCode();
+    private String generateChecksum(String script) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(script.getBytes());
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
