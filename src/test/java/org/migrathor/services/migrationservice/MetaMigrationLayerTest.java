@@ -44,10 +44,9 @@ class MetaMigrationLayerTest {
     @Test
     void migrateToVersion_success() throws MigrationException, SQLException {
         when(databaseService.executeSelectQuery(anyString())).thenReturn(resultSet);
-        doReturn(1).when(resultSet).getInt(1);
+        doReturn("").when(resultSet).getString(anyInt());
         when(resultSet.next()).thenReturn(true);
         when(migrationService.getScript(anyInt(), any())).thenReturn("script");
-
 
         assertDoesNotThrow(() -> metaMigrationLayer.migrateToVersion(2));
         verify(migrationService, times(1)).migrateToVersion(2);
@@ -56,12 +55,10 @@ class MetaMigrationLayerTest {
     @Test
     void migrateToVersion_failsWhenDbError() throws MigrationException, SQLException {
         when(databaseService.executeSelectQuery(anyString())).thenReturn(resultSet);
-        doReturn(1).when(resultSet).getInt(1);
+        doReturn("").when(resultSet).getString(anyInt());
         when(resultSet.next()).thenReturn(true);
         when(migrationService.getScript(anyInt(), any())).thenReturn("script");
         doThrow(new SQLException()).when(databaseService).executeTransactionalQuery(anyString());
-
-
 
         assertThrows(RuntimeException.class, () -> metaMigrationLayer.migrateToVersion(2));
         verify(migrationService, times(1)).migrateToVersion(2);
